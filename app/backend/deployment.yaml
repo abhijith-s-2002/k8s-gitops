@@ -15,42 +15,35 @@ spec:
     spec:
       containers:
       - name: backend
-        image: public.ecr.aws/docker/library/node:18
+        image: public.ecr.aws/docker/library/python:3.9
         command: ["sh", "-c"]
         args:
           - |
-            echo "Installing deps..."
-            npm init -y
-            npm install express mysql2
+            pip install flask mysql-connector-python
 
-            echo "Creating server..."
-            cat > server.js <<EOF
-            const express = require('express');
-            const mysql = require('mysql2');
+            cat > app.py <<EOF
+            from flask import Flask, jsonify
+            import mysql.connector
 
-            const app = express();
+            app = Flask(__name__)
 
-            const db = mysql.createConnection({
-              host: 'mysql-service',
-              user: 'user',
-              password: 'password',
-              database: 'testdb'
-            });
+            db = mysql.connector.connect(
+                host="mysql-service",
+                user="user",
+                password="password",
+                database="testdb"
+            )
 
-            app.get('/users', (req, res) => {
-              db.query('SELECT * FROM users', (err, results) => {
-                if (err) {
-                  console.error(err);
-                  return res.status(500).send(err);
-                }
-                res.json(results);
-              });
-            });
+            @app.route("/users")
+            def users():
+                cursor = db.cursor(dictionary=True)
+                cursor.execute("SELECT * FROM users")
+                result = cursor.fetchall()
+                return jsonify(result)
 
-            app.listen(3000, () => console.log('Server running'));
+            app.run(host="0.0.0.0", port=3000)
             EOF
 
-            echo "Starting server..."
-            node server.js
+            python app.py
         ports:
         - containerPort: 3000
