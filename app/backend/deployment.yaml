@@ -24,14 +24,15 @@ spec:
             cat > app.py <<EOF
             from flask import Flask, jsonify
             import mysql.connector
+            import os
 
             app = Flask(__name__)
 
             db = mysql.connector.connect(
-                host="mysql-service",
-                user="user",
-                password="password",
-                database="testdb"
+                host=os.environ.get("DB_HOST"),
+                user=os.environ.get("DB_USER"),
+                password=os.environ.get("DB_PASSWORD"),
+                database=os.environ.get("DB_NAME")
             )
 
             @app.route("/users")
@@ -45,5 +46,22 @@ spec:
             EOF
 
             python app.py
+
         ports:
         - containerPort: 3000
+
+        env:
+        - name: DB_HOST
+          value: mysql-service
+
+        - name: DB_USER
+          value: user
+
+        - name: DB_NAME
+          value: testdb
+
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-secret
+              key: DB_PASSWORD
